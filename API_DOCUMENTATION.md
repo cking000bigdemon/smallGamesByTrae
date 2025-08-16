@@ -238,6 +238,236 @@ curl -X GET http://localhost:8082/api/leaderboard
 
 ---
 
+## 赛车游戏API端点
+
+### 6. 创建赛车游戏
+创建一个新的赛车起跑反应游戏房间。
+
+**端点信息**
+- **URL**: `/api/racing/create`
+- **方法**: `POST`
+- **描述**: 创建新的赛车游戏
+
+**请求格式**
+- **Content-Type**: `application/json`
+
+**请求示例**
+```bash
+curl -X POST http://localhost:8082/api/racing/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "player_count": 2,
+    "round_count": 3,
+    "player_names": ["张三", "李四"]
+  }'
+```
+
+**请求体参数**
+| 参数名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| player_count | integer | 是 | 玩家数量 (2-4) |
+| round_count | integer | 是 | 游戏回合数 (1-5) |
+| player_names | array[string] | 是 | 玩家名称列表 |
+
+**响应示例**
+```json
+{
+  "game_id": "550e8400-e29b-41d4-a716-446655440000",
+  "game_state": "Waiting",
+  "players": [
+    {"id": 1, "name": "张三", "score": 0, "key": " "},
+    {"id": 2, "name": "李四", "score": 0, "key": "Enter"}
+  ],
+  "max_rounds": 3,
+  "current_round": 0
+}
+```
+
+---
+
+### 7. 开始游戏回合
+开始一个新的游戏回合，重置玩家状态。
+
+**端点信息**
+- **URL**: `/api/racing/start/{game_id}`
+- **方法**: `POST`
+- **描述**: 开始游戏回合
+
+**请求示例**
+```bash
+curl -X POST http://localhost:8082/api/racing/start/550e8400-e29b-41d4-a716-446655440000
+```
+
+**响应示例**
+```json
+{
+  "game_id": "550e8400-e29b-41d4-a716-446655440000",
+  "game_state": "Ready",
+  "current_round": 1,
+  "players": [
+    {"id": 1, "name": "张三", "score": 0},
+    {"id": 2, "name": "李四", "score": 0}
+  ]
+}
+```
+
+---
+
+### 8. 触发绿灯信号
+通知服务器绿灯已亮起，开始计时。
+
+**端点信息**
+- **URL**: `/api/racing/trigger/{game_id}`
+- **方法**: `POST`
+- **描述**: 触发绿灯信号
+
+**请求示例**
+```bash
+curl -X POST http://localhost:8082/api/racing/trigger/550e8400-e29b-41d4-a716-446655440000
+```
+
+**响应示例**
+```json
+{
+  "success": true,
+  "message": "绿灯已亮起",
+  "timestamp": 1640995200000
+}
+```
+
+---
+
+### 9. 记录玩家反应
+记录玩家的反应时间。
+
+**端点信息**
+- **URL**: `/api/racing/react`
+- **方法**: `POST`
+- **描述**: 记录玩家反应时间
+
+**请求格式**
+- **Content-Type**: `application/json`
+
+**请求示例**
+```bash
+curl -X POST http://localhost:8082/api/racing/react \
+  -H "Content-Type: application/json" \
+  -d '{
+    "game_id": "550e8400-e29b-41d4-a716-446655440000",
+    "player_id": 1,
+    "reaction_time": 245
+  }'
+```
+
+**请求体参数**
+| 参数名 | 类型 | 必需 | 描述 |
+|--------|------|------|------|
+| game_id | string | 是 | 游戏ID |
+| player_id | integer | 是 | 玩家ID (1-4) |
+| reaction_time | integer | 是 | 反应时间（毫秒） |
+
+**响应示例**
+```json
+{
+  "success": true,
+  "message": "反应时间已记录",
+  "player_id": 1,
+  "reaction_time": 245,
+  "points": 100
+}
+```
+
+**错误响应示例**
+```json
+{
+  "error": "玩家1已反应，已反应玩家: [1, 2]",
+  "code": 400
+}
+```
+
+---
+
+### 10. 结束游戏回合
+结束当前回合，计算最终排名和积分。
+
+**端点信息**
+- **URL**: `/api/racing/finish/{game_id}`
+- **方法**: `POST`
+- **描述**: 结束当前回合
+
+**请求示例**
+```bash
+curl -X POST http://localhost:8082/api/racing/finish/550e8400-e29b-41d4-a716-446655440000
+```
+
+**响应示例**
+```json
+{
+  "round_complete": true,
+  "player_results": [
+    {
+      "player_id": 1,
+      "name": "张三",
+      "reaction_time": 245,
+      "rank": 1,
+      "points": 100,
+      "is_false_start": false
+    },
+    {
+      "player_id": 2,
+      "name": "李四",
+      "reaction_time": 320,
+      "rank": 2,
+      "points": 75,
+      "is_false_start": false
+    }
+  ],
+  "game_over": false
+}
+```
+
+---
+
+### 11. 获取游戏状态
+获取当前游戏的完整状态信息。
+
+**端点信息**
+- **URL**: `/api/racing/status/{game_id}`
+- **方法**: `GET`
+- **描述**: 获取游戏状态
+
+**请求示例**
+```bash
+curl -X GET http://localhost:8082/api/racing/status/550e8400-e29b-41d4-a716-446655440000
+```
+
+**响应示例**
+```json
+{
+  "game_id": "550e8400-e29b-41d4-a716-446655440000",
+  "game_state": "GameOver",
+  "current_round": 3,
+  "max_rounds": 3,
+  "players": [
+    {
+      "id": 1,
+      "name": "张三",
+      "score": 275,
+      "has_reacted": true
+    },
+    {
+      "id": 2,
+      "name": "李四",
+      "score": 225,
+      "has_reacted": true
+    }
+  ],
+  "reacted_players": [1, 2]
+}
+```
+
+---
+
 ## 错误处理
 
 ### 错误响应格式
@@ -283,7 +513,7 @@ curl -X GET http://localhost:8082/api/leaderboard
 
 ### 完整游戏流程示例
 
-1. **开始新游戏**
+#### 猜数字游戏流程
 ```bash
 # 获取游戏信息
 curl http://localhost:8082/api/info
@@ -299,13 +529,45 @@ curl -X POST http://localhost:8082/api/guess \
 curl -X POST http://localhost:8082/api/reset
 ```
 
-2. **获取游戏列表**
+#### 赛车游戏完整流程
 ```bash
-curl http://localhost:8082/api/games
+# 1. 创建赛车游戏
+curl -X POST http://localhost:8082/api/racing/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "player_count": 2,
+    "round_count": 3,
+    "player_names": ["张三", "李四"]
+  }'
+
+# 2. 开始游戏回合
+curl -X POST http://localhost:8082/api/racing/start/{game_id}
+
+# 3. 触发绿灯信号
+curl -X POST http://localhost:8082/api/racing/trigger/{game_id}
+
+# 4. 记录玩家反应
+curl -X POST http://localhost:8082/api/racing/react \
+  -H "Content-Type: application/json" \
+  -d '{
+    "game_id": "{game_id}",
+    "player_id": 1,
+    "reaction_time": 245
+  }'
+
+# 5. 结束游戏回合
+curl -X POST http://localhost:8082/api/racing/finish/{game_id}
+
+# 6. 获取游戏状态
+curl http://localhost:8082/api/racing/status/{game_id}
 ```
 
-3. **查看排行榜**
+### 其他操作
 ```bash
+# 获取游戏列表
+curl http://localhost:8082/api/games
+
+# 查看排行榜
 curl http://localhost:8082/api/leaderboard
 ```
 
@@ -316,11 +578,12 @@ curl http://localhost:8082/api/leaderboard
 ### Postman 集合
 你可以使用以下Postman集合进行测试：
 
+#### 猜数字游戏集合
 ```json
 {
   "info": {
-    "name": "小游戏网站API",
-    "description": "猜数字游戏API测试集合"
+    "name": "猜数字游戏API",
+    "description": "经典猜数字游戏API测试集合"
   },
   "item": [
     {
@@ -353,13 +616,76 @@ curl http://localhost:8082/api/leaderboard
 }
 ```
 
+#### 赛车游戏完整集合
+```json
+{
+  "info": {
+    "name": "赛车起跑反应游戏API",
+    "description": "多人赛车起跑反应游戏API测试集合"
+  },
+  "item": [
+    {
+      "name": "创建赛车游戏",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8082/api/racing/create",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"player_count\": 2,\n  \"round_count\": 3,\n  \"player_names\": [\"张三\", \"李四\"]\n}"
+        }
+      }
+    },
+    {
+      "name": "开始游戏回合",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8082/api/racing/start/{{game_id}}"
+      }
+    },
+    {
+      "name": "触发绿灯信号",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8082/api/racing/trigger/{{game_id}}"
+      }
+    },
+    {
+      "name": "记录玩家反应",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8082/api/racing/react",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"game_id\": \"{{game_id}}\",\n  \"player_id\": 1,\n  \"reaction_time\": 245\n}"
+        }
+      }
+    },
+    {
+      "name": "结束游戏回合",
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:8082/api/racing/finish/{{game_id}}"
+      }
+    },
+    {
+      "name": "获取游戏状态",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:8082/api/racing/status/{{game_id}}"
+      }
+    }
+  ]
+}
+```
+
 ### cURL 测试脚本
 
+#### 猜数字游戏测试
 ```bash
 #!/bin/bash
-# 小游戏网站API测试脚本
-
-echo "=== 小游戏网站API测试 ==="
+echo "=== 猜数字游戏API测试 ==="
 
 # 1. 获取游戏信息
 echo "1. 获取游戏信息..."
@@ -379,8 +705,124 @@ curl -s -X POST http://localhost:8082/api/guess \
   -H "Content-Type: application/json" \
   -d '{"guess": 50}' | jq .
 
-echo "=== 测试完成 ==="
+echo "=== 猜数字游戏测试完成 ==="
 ```
+
+#### 赛车游戏完整测试
+```bash
+#!/bin/bash
+echo "=== 赛车起跑反应游戏完整测试 ==="
+
+# 1. 创建游戏
+echo "1. 创建赛车游戏..."
+GAME_RESPONSE=$(curl -s -X POST http://localhost:8082/api/racing/create \
+  -H "Content-Type: application/json" \
+  -d '{"player_count": 2, "round_count": 3, "player_names": ["张三", "李四"]}')
+
+echo "创建游戏响应:"
+echo $GAME_RESPONSE | jq .
+
+# 提取游戏ID
+GAME_ID=$(echo $GAME_RESPONSE | jq -r '.game_id')
+echo "游戏ID: $GAME_ID"
+
+# 2. 开始回合
+echo "2. 开始回合..."
+curl -s -X POST http://localhost:8082/api/racing/start/$GAME_ID | jq .
+
+# 3. 触发绿灯
+echo "3. 触发绿灯信号..."
+curl -s -X POST http://localhost:8082/api/racing/trigger/$GAME_ID | jq .
+
+# 4. 记录反应
+echo "4. 记录玩家反应..."
+curl -s -X POST http://localhost:8082/api/racing/react \
+  -H "Content-Type: application/json" \
+  -d "{\"game_id\": \"$GAME_ID\", \"player_id\": 1, \"reaction_time\": 245}" | jq .
+
+curl -s -X POST http://localhost:8082/api/racing/react \
+  -H "Content-Type: application/json" \
+  -d "{\"game_id\": \"$GAME_ID\", \"player_id\": 2, \"reaction_time\": 320}" | jq .
+
+# 5. 结束回合
+echo "5. 结束回合..."
+curl -s -X POST http://localhost:8082/api/racing/finish/$GAME_ID | jq .
+
+# 6. 获取最终状态
+echo "6. 获取最终游戏状态..."
+curl -s http://localhost:8082/api/racing/status/$GAME_ID | jq .
+
+echo "=== 赛车游戏测试完成 ==="
+```
+
+---
+
+## 故障排除
+
+### 常见问题
+
+#### 猜数字游戏
+1. **端口被占用**
+   - 错误信息: `error: could not compile due to previous error`
+   - 解决方案: 修改 `src/main.rs` 中的端口或使用其他可用端口
+
+2. **数据库连接失败**
+   - 确保数据目录有写权限
+   - 检查 `data/` 目录是否存在
+
+3. **游戏状态异常**
+   - 访问 `/api/reset` 重置游戏状态
+   - 检查服务器日志获取详细错误信息
+
+#### 赛车游戏
+1. **400 Bad Request - 玩家已反应**
+   - 原因: 玩家在当前回合已提交过反应时间
+   - 解决方案: 确保每回合每个玩家只提交一次反应
+
+2. **游戏未正确结束**
+   - 原因: 前端状态同步问题
+   - 解决方案: 刷新页面重新加载游戏状态
+
+3. **多人游戏连接问题**
+   - 确保所有玩家使用相同的游戏ID
+   - 检查网络连接状态
+
+### 调试技巧
+
+#### 查看实时日志
+```bash
+# Windows (PowerShell)
+tail -f data/games.log
+
+# Linux/macOS
+tail -f data/games.log
+```
+
+#### API测试工具推荐
+1. **Postman** - 图形化API测试工具
+2. **curl** - 命令行测试工具
+3. **HTTPie** - 更友好的命令行工具
+
+#### 性能监控
+```bash
+# 查看游戏统计
+curl http://localhost:8082/api/info
+
+# 查看游戏列表
+curl http://localhost:8082/api/games
+
+# 查看排行榜
+curl http://localhost:8082/api/leaderboard
+```
+
+### 错误代码参考
+
+| 错误代码 | 描述 | 解决方案 |
+|---------|------|----------|
+| 400 | 请求参数错误 | 检查JSON格式和必填字段 |
+| 404 | 游戏不存在 | 确认游戏ID是否正确 |
+| 409 | 游戏状态冲突 | 等待当前操作完成或重置游戏 |
+| 500 | 服务器内部错误 | 检查服务器日志获取详情 |
 
 ---
 

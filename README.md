@@ -8,9 +8,9 @@
 - 🦀 **Rust高性能后端**：基于tiny_http的轻量级HTTP服务器
 - 🎨 **现代化响应式UI**：完美适配桌面和移动端
 - 🎯 **经典猜数字游戏**：完整的游戏逻辑和用户体验
-- 🏎️ **赛车起跑反应游戏**：多人竞速反应游戏 (开发中)
-- 👥 **多人游戏支持**：实时对战模式
-- 📊 **实时游戏统计**：进度跟踪、历史记录、成就系统
+- 🏎️ **赛车起跑反应游戏**：多人竞速反应游戏 ✅ 已完成
+- 👥 **多人游戏支持**：2-4人实时对战模式
+- 📊 **实时游戏统计**：进度跟踪、积分系统、回合记录
 - 🔄 **完整API支持**：RESTful设计，JSON数据格式
 - 🌐 **零依赖部署**：单文件可执行，跨平台支持
 
@@ -28,8 +28,8 @@ guess_number/
 ├── static/
 │   ├── index.html           # 网站首页
 │   ├── guess-number.html    # 猜数游戏页面
-│   ├── racing-game.html   # 赛车起跑反应游戏页面 (待开发)
-│   ├── racing-game.js     # 赛车游戏逻辑 (待开发)
+│   ├── racing-game.html     # 赛车起跑反应游戏页面 ✅ 已完成
+│   ├── racing-game.js       # 赛车游戏逻辑 ✅ 已完成
 │   ├── styles.css         # 响应式样式系统
 │   ├── script.js          # 网站交互逻辑
 │   └── guess-number.js    # 游戏核心逻辑
@@ -91,17 +91,19 @@ test_api.bat  # 自动测试所有API端点
 |------|------|------|
 | `/` | GET | 网站首页 |
 | `/guess-number.html` | GET | 猜数游戏页面 |
-| `/api/info` | GET | 获取游戏状态 |
+| `/racing-game.html` | GET | 赛车起跑反应游戏页面 |
+| `/api/info` | GET | 获取猜数字游戏状态 |
 | `/api/guess` | POST | 提交数字猜测 |
-| `/api/reset` | POST | 重置游戏 |
+| `/api/reset` | POST | 重置猜数字游戏 |
 | `/api/games` | GET | 获取游戏列表 |
 | `/api/leaderboard` | GET | 获取排行榜 |
-| `/api/racing/create` | POST | 创建游戏房间 |
-| `/api/racing/start/{game_id}` | POST | 开始游戏 |
-| `/api/racing/ready` | POST | 玩家准备 |
-| `/api/racing/react` | POST | 记录反应时间 |
-| `/api/racing/status/{game_id}` | GET | 获取游戏状态 |
-| `WebSocket /racing/{game_id}` | WS | 实时通信
+| `/api/racing/create` | POST | 创建赛车游戏房间 |
+| `/api/racing/start/{game_id}` | POST | 开始赛车游戏回合 |
+| `/api/racing/trigger/{game_id}` | POST | 触发绿灯信号 |
+| `/api/racing/react` | POST | 记录玩家反应时间 |
+| `/api/racing/finish/{game_id}` | POST | 结束当前回合 |
+| `/api/racing/status/{game_id}` | GET | 获取赛车游戏状态 |
+| `/test_fix.html` | GET | API测试页面 |
 
 ### 完整API文档
 详见 [API_DOCUMENTATION.md](API_DOCUMENTATION.md) 文件，包含：
@@ -179,12 +181,14 @@ cargo build --release
 
 ## 🚀 扩展计划
 
-### 赛车起跑反应游戏 (开发中)
-- [ ] 信号灯动画系统
-- [ ] 多人实时对战
-- [ ] WebSocket通信
-- [ ] 积分排行榜
-- [ ] 音效和震动反馈
+### 赛车起跑反应游戏 ✅ 已完成
+- ✅ 信号灯动画系统 - 5级红绿信号灯
+- ✅ 多人实时对战 - 支持2-4名玩家
+- ✅ 积分排行榜 - 实时积分和最终排名
+- ✅ 回合制系统 - 可配置1-5轮游戏
+- ✅ 反应时间记录 - 毫秒级精度
+- ✅ 抢跑检测 - 智能false start识别
+- ✅ 响应式设计 - 完美适配移动端
 
 ### 即将推出的功能
 - [ ] **更多游戏**：2048、扫雷、井字棋等

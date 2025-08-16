@@ -442,10 +442,10 @@ fn extract_json_value(json_str: &str, key: &str) -> Option<String> {
 
 fn main() -> std::io::Result<()> {
     println!("🎮 小游戏服务器启动中...");
-    println!("🌐 访问 http://localhost:8080 开始游戏");
+    println!("🌐 访问 http://localhost:8082 开始游戏");
     println!("🏎️ 赛车游戏API已就绪");
 
-    let server = Server::http("0.0.0.0:8080").unwrap();
+    let server = Server::http("0.0.0.0:8082").unwrap();
     let game_state = Arc::new(Mutex::new(GuessGameState::new()));
     let racing_storage = Arc::new(Mutex::new(GameStateStorage::new()));
 

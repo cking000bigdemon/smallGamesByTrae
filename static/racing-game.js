@@ -330,7 +330,14 @@ class RacingGame {
 
             const roundResult = await response.json();
             
-            // 直接检查roundResult是否有有效数据
+            // 获取游戏状态以检查是否结束
+            const statusResponse = await fetch(`/api/racing/status/${this.gameId}`);
+            const gameData = await statusResponse.json();
+            
+            // 直接检查当前回合数是否达到最大回合数
+            const isGameOver = gameData.current_round >= gameData.max_rounds;
+            
+            // 更新玩家积分
             if (roundResult && roundResult.player_results && 
                 Array.isArray(roundResult.player_results) && 
                 roundResult.player_results.length > 0) {
@@ -353,13 +360,14 @@ class RacingGame {
             // 重置信号灯
             this.resetLights();
             
-            // 获取游戏状态以检查是否结束
-            const statusResponse = await fetch(`/api/racing/status/${this.gameId}`);
-            const gameData = await statusResponse.json();
-            
-            if (gameData.game_state === 'GameOver') {
-                this.showFinalResults();
+            if (isGameOver) {
+                // 游戏结束
+                this.updateStatus('游戏结束！', 'finished');
+                setTimeout(() => {
+                    this.showFinalResults();
+                }, 1000);
             } else {
+                // 继续下一轮
                 document.getElementById('next-round-btn').style.display = 'inline-block';
             }
             
