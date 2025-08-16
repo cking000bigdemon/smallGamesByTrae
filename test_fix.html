@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试赛车游戏修复</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button { margin: 5px; padding: 10px 20px; }
+    </style>
+</head>
+<body>
+    <h1>🏎️ 赛车游戏修复测试</h1>
+    
+    <div>
+        <button onclick="runTest()">运行完整测试</button>
+        <button onclick="clearResults()">清空结果</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        let gameId = null;
+
+        async function runTest() {
+            clearResults();
+            addResult('开始测试...', 'info');
+            
+            try {
+                // 1. 创建游戏
+                addResult('1. 创建游戏...', 'info');
+                const createResponse = await fetch('http://localhost:8080/api/racing/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        player_count: 2,
+                        round_count: 1,
+                        player_names: ["测试玩家1", "测试玩家2"]
+                    })
+                });
+                const createData = await createResponse.json();
+                gameId = createData.game_id;
+                addResult(`✅ 游戏创建成功: ${gameId}`, 'success');
+
+                // 2. 开始游戏
+                addResult('2. 开始游戏...', 'info');
+                const startResponse = await fetch(`http://localhost:8080/api/racing/start/${gameId}`, {
+                    method: 'POST'
+                });
+                const startData = await startResponse.json();
+                addResult('✅ 游戏开始成功', 'success');
+
+                // 3. 触发绿灯
+                addResult('3. 触发绿灯...', 'info');
+                const triggerResponse = await fetch(`http://localhost:8080/api/racing/trigger/${gameId}`, {
+                    method: 'POST'
+                });
+                const triggerData = await triggerResponse.json();
+                addResult('✅ 绿灯触发成功', 'success');
+
+                // 4. 记录玩家1反应
+                addResult('4. 记录玩家1反应...', 'info');
+                const react1Response = await fetch('http://localhost:8080/api/racing/react', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        game_id: gameId,
+                        player_id: 1,
+                        reaction_time: 586
+                    })
+                });
+                const react1Data = await react1Response.json();
+                addResult(`✅ 玩家1反应记录: ${JSON.stringify(react1Data)}`, 'success');
+
+                // 5. 记录玩家2反应
+                addResult('5. 记录玩家2反应...', 'info');
+                const react2Response = await fetch('http://localhost:8080/api/racing/react', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        game_id: gameId,
+                        player_id: 2,
+                        reaction_time: 905
+                    })
+                });
+                const react2Data = await react2Response.json();
+                addResult(`✅ 玩家2反应记录: ${JSON.stringify(react2Data)}`, 'success');
+
+                // 6. 结束回合
+                addResult('6. 结束回合...', 'info');
+                const finishResponse = await fetch(`http://localhost:8080/api/racing/finish/${gameId}`, {
+                    method: 'POST'
+                });
+                const finishData = await finishResponse.json();
+                
+                // 检查结果
+                const hasValidResults = finishData.player_results.some(p => p.rank !== null);
+                if (hasValidResults) {
+                    addResult(`🎉 回合结果正常: ${JSON.stringify(finishData, null, 2)}`, 'success');
+                } else {
+                    addResult(`❌ 回合结果异常: ${JSON.stringify(finishData, null, 2)}`, 'error');
+                }
+
+            } catch (error) {
+                addResult(`❌ 测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        function addResult(message, type) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // 自动运行测试
+        setTimeout(runTest, 1000);
+    </script>
+</body>
+</html>

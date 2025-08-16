@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 猜数游戏 - 小游戏乐园</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- 游戏头部 -->
+        <div class="game-header">
+            <h1>
+                <i class="fas fa-target"></i>
+                猜数游戏
+                <span class="version-badge">v2.0</span>
+            </h1>
+            <p class="game-subtitle">挑战你的直觉，猜出正确的数字！</p>
+        </div>
+
+        <!-- 游戏统计 -->
+        <div class="game-stats">
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <span class="stat-label">范围</span>
+                <span class="stat-value" id="range">1-100</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔢</div>
+                <span class="stat-label">已猜次数</span>
+                <span class="stat-value" id="attempts">0</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <span class="stat-label">游戏时间</span>
+                <span class="stat-value" id="gameTime">00:00</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏆</div>
+                <span class="stat-label">最佳记录</span>
+                <span class="stat-value" id="bestScore">-</span>
+            </div>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="progress-section">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">新游戏开始！</div>
+        </div>
+
+        <!-- 游戏区域 -->
+        <div class="game-area">
+            <div class="input-section">
+                <label for="guessInput">
+                    <i class="fas fa-keyboard"></i>
+                    输入你的猜测：
+                </label>
+                <div class="input-container">
+                    <input 
+                        type="number" 
+                        id="guessInput" 
+                        placeholder="输入数字" 
+                        min="1" 
+                        max="100"
+                        autocomplete="off"
+                    >
+                    <button id="guessBtn" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                        提交猜测
+                    </button>
+                </div>
+                <div class="input-hints">
+                    <span class="hint-item">
+                        <i class="fas fa-lightbulb"></i>
+                        输入1-100之间的数字
+                    </span>
+                </div>
+            </div>
+
+            <!-- 结果展示 -->
+            <div class="result-section">
+                <div class="result-card" id="resultCard">
+                    <div class="result-icon" id="resultIcon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="result-message" id="result">开始游戏吧！</div>
+                    <div class="hint-message" id="hint">输入数字后点击提交</div>
+                </div>
+            </div>
+
+            <!-- 控制按钮 -->
+            <div class="controls">
+                <button id="resetBtn" class="btn-secondary">
+                    <i class="fas fa-redo"></i>
+                    重新开始
+                </button>
+                <button id="newGameBtn" class="btn-success" style="display: none;">
+                    <i class="fas fa-play"></i>
+                    新游戏
+                </button>
+                <button id="backToHomeBtn" class="btn-text">
+                    <i class="fas fa-home"></i>
+                    返回首页
+                </button>
+            </div>
+        </div>
+
+        <!-- 猜测历史 -->
+        <div class="history-section">
+            <div class="history-header">
+                <h3>
+                    <i class="fas fa-history"></i>
+                    猜测历史
+                </h3>
+            </div>
+            <div class="history-stats">
+                <span>共 <span id="historyCount">0</span> 次猜测</span>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="empty-history">
+                    <i class="fas fa-search"></i>
+                    <p>还没有猜测记录</p>
+                    <small>开始游戏后这里会显示你的猜测历史</small>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="clearHistoryBtn" class="btn-text">
+                    <i class="fas fa-trash"></i>
+                    清空历史
+                </button>
+            </div>
+        </div>
+
+        <!-- 成就系统 -->
+        <div class="achievements" id="achievements" style="display: none;">
+            <div class="achievement-card">
+                <i class="fas fa-trophy"></i>
+                <span id="achievementText">成就解锁！</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>正在加载游戏...</p>
+        </div>
+    </div>
+
+    <!-- 错误遮罩 -->
+    <div class="error-overlay" id="errorOverlay">
+        <div class="error-content">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>连接服务器失败</h3>
+            <p>请检查网络连接或稍后再试</p>
+            <button id="retryConnectionBtn" class="btn-primary">
+                <i class="fas fa-redo"></i>
+                重试连接
+            </button>
+        </div>
+    </div>
+
+    <script src="guess-number.js"></script>
+</body>
+</html>

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏎️ 赛车起跑反应游戏</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* 赛车游戏专用样式 */
+        .racing-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .traffic-lights {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .light {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #444;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .light::before {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 20%;
+            width: 30%;
+            height: 30%;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .light.red {
+            background: linear-gradient(145deg, #8B0000, #DC143C);
+            box-shadow: 0 0 20px rgba(220, 20, 60, 0.5);
+        }
+
+        .light.red.active {
+            background: linear-gradient(145deg, #FF0000, #FF4500);
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.8);
+            animation: pulse-red 1s infinite;
+        }
+
+        .light.green {
+            background: linear-gradient(145deg, #006400, #228B22);
+            box-shadow: 0 0 20px rgba(34, 139, 34, 0.5);
+        }
+
+        .light.green.active {
+            background: linear-gradient(145deg, #00FF00, #32CD32);
+            box-shadow: 0 0 40px rgba(0, 255, 0, 0.8);
+            animation: pulse-green 1s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(1); box-shadow: 0 0 40px rgba(255, 0, 0, 0.8); }
+            50% { transform: scale(1.1); box-shadow: 0 0 60px rgba(255, 0, 0, 1); }
+            100% { transform: scale(1); box-shadow: 0 0 40px rgba(255, 0, 0, 0.8); }
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(1); box-shadow: 0 0 40px rgba(0, 255, 0, 0.8); }
+            50% { transform: scale(1.1); box-shadow: 0 0 60px rgba(0, 255, 0, 1); }
+            100% { transform: scale(1); box-shadow: 0 0 40px rgba(0, 255, 0, 0.8); }
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .player-card {
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .player-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .player-card.ready {
+            border-color: #4CAF50;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .player-card .color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin: 0 auto 10px;
+        }
+
+        .player-card.red .color-indicator { background: #FF5252; }
+        .player-card.blue .color-indicator { background: #2196F3; }
+        .player-card.green .color-indicator { background: #4CAF50; }
+        .player-card.yellow .color-indicator { background: #FFEB3B; }
+
+        .game-controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .status-display {
+            text-align: center;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .status-waiting { background: rgba(255, 193, 7, 0.2); color: #FFC107; }
+        .status-countdown { background: rgba(244, 67, 54, 0.2); color: #F44336; }
+        .status-ready { background: rgba(255, 152, 0, 0.2); color: #FF9800; }
+        .status-racing { background: rgba(76, 175, 80, 0.2); color: #4CAF50; }
+        .status-finished { background: rgba(156, 39, 176, 0.2); color: #9C27B0; }
+
+        .reaction-time {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+
+        .false-start {
+            color: #F44336;
+            font-weight: bold;
+        }
+
+        .round-results {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .rank-badge {
+            background: linear-gradient(145deg, #FFD700, #FFA500);
+            color: #000;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .traffic-lights {
+                gap: 10px;
+                padding: 15px;
+            }
+            
+            .light {
+                width: 45px;
+                height: 45px;
+            }
+            
+            .players-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .key-display {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            padding: 5px 10px;
+            font-family: monospace;
+            font-weight: bold;
+            margin: 5px;
+        }
+
+        .countdown-timer {
+            font-size: 3em;
+            font-weight: bold;
+            color: #FFC107;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="racing-container">
+        <div class="game-header">
+            <h1>🏎️ 赛车起跑反应游戏</h1>
+            <p>测试你的反应速度！等待绿灯亮起后尽快按下起跑键</p>
+        </div>
+
+        <!-- 游戏设置 -->
+        <div id="game-setup" class="card">
+            <h3>游戏设置</h3>
+            <div class="form-group">
+                <label>玩家数量:</label>
+                <select id="player-count">
+                    <option value="1">1人</option>
+                    <option value="2" selected>2人</option>
+                    <option value="3">3人</option>
+                    <option value="4">4人</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>游戏轮数:</label>
+                <select id="round-count">
+                    <option value="3">3轮</option>
+                    <option value="5" selected>5轮</option>
+                    <option value="7">7轮</option>
+                    <option value="10">10轮</option>
+                </select>
+            </div>
+            <div id="player-names">
+                <div class="form-group">
+                    <label>玩家1名称:</label>
+                    <input type="text" id="player1-name" value="玩家1" maxlength="10">
+                </div>
+                <div class="form-group">
+                    <label>玩家2名称:</label>
+                    <input type="text" id="player2-name" value="玩家2" maxlength="10">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="createGame()">创建游戏</button>
+        </div>
+
+        <!-- 游戏界面 -->
+        <div id="game-interface" style="display: none;">
+            <!-- 状态显示 -->
+            <div id="status-display" class="status-display status-waiting">
+                等待游戏开始...
+            </div>
+
+            <!-- 信号灯 -->
+            <div class="traffic-lights">
+                <div class="light red" id="light-0"></div>
+                <div class="light red" id="light-1"></div>
+                <div class="light red" id="light-2"></div>
+                <div class="light red" id="light-3"></div>
+                <div class="light red" id="light-4"></div>
+            </div>
+
+            <!-- 倒计时 -->
+            <div id="countdown" class="countdown-timer" style="display: none;"></div>
+
+            <!-- 玩家区域 -->
+            <div class="players-grid" id="players-grid">
+                <!-- 动态生成玩家卡片 -->
+            </div>
+
+            <!-- 游戏控制 -->
+            <div class="game-controls">
+                <div class="btn-group">
+                    <button class="btn btn-success" id="start-btn" onclick="startGame()" style="display: none;">开始游戏</button>
+                    <button class="btn btn-warning" id="ready-btn" onclick="playerReady()" style="display: none;">准备就绪</button>
+                    <button class="btn btn-info" id="next-round-btn" onclick="nextRound()" style="display: none;">下一轮</button>
+                    <button class="btn btn-secondary" onclick="resetGame()">重新开始</button>
+                </div>
+            </div>
+
+            <!-- 回合结果 -->
+            <div id="round-results" class="round-results" style="display: none;">
+                <h3>回合结果</h3>
+                <div id="results-list"></div>
+            </div>
+
+            <!-- 最终排行榜 -->
+            <div id="final-leaderboard" class="round-results" style="display: none;">
+                <h3>🏆 最终排行榜</h3>
+                <div id="leaderboard-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 指令提示 -->
+    <div id="instructions" class="instructions">
+        <h4>🎮 游戏说明</h4>
+        <ul>
+            <li><strong>红灯阶段:</strong> 5盏红灯依次亮起，每盏1秒</li>
+            <li><strong>等待阶段:</strong> 红灯全亮后随机等待1.5-5秒</li>
+            <li><strong>绿灯阶段:</strong> 5盏绿灯同时亮起，立即按下起跑键</li>
+            <li><strong>起跑键:</strong>
+                <span class="key-display">玩家1: 空格键</span>
+                <span class="key-display">玩家2: 回车键</span>
+                <span class="key-display">玩家3: A键</span>
+                <span class="key-display">玩家4: L键</span>
+            </li>
+            <li><strong>积分规则:</strong> 第1名10分，第2名7分，第3名5分，第4名3分</li>
+            <li><strong>抢跑惩罚:</strong> 提前按键扣5分</li>
+        </ul>
+    </div>
+
+    <script src="racing-game.js"></script>
+</body>
+</html>
