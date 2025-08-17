@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use regex::Regex;
+use tiny_http::{Header, Method, Response, Server, StatusCode};
 
-use tiny_http::{Server, Method, Response, StatusCode, Header};
-use uuid::Uuid;
+mod database;
+
+use database::{GameDatabase, SyncDatabaseManager};
+
 use rand::Rng;
 
 // 游戏状态枚举
@@ -82,7 +84,7 @@ impl RacingGame {
             .collect();
 
         Self {
-            game_id: Uuid::new_v4().to_string(),
+            game_id: format!("game_{}", rand::thread_rng().gen::<u32>()),
             game_state: GameState::Waiting,
             players,
             current_round: 0,
@@ -147,7 +149,7 @@ impl RacingGame {
             .iter()
             .map(|player| {
                 // 检查玩家是否有反应记录
-                let has_reacted = self.reacted_players.contains(&player.id);
+                let _has_reacted = self.reacted_players.contains(&player.id);
                 let reaction_time = self.player_reactions.get(&player.id).copied();
                 
                 // 检查是否抢跑（反应时间小于100ms）
@@ -425,25 +427,18 @@ impl GuessGameState {
     }
 }
 
-// 辅助函数：从JSON字符串中提取值
-fn extract_json_value(json_str: &str, key: &str) -> Option<String> {
-    // 更灵活的模式，处理转义字符
-    let pattern = format!(r#"{}["']?\s*:\s*["']?([^"'\}},\s]+)["']?"#, key);
-    let re = Regex::new(&pattern).ok()?;
-    if let Some(captures) = re.captures(json_str) {
-        captures.get(1).map(|m| m.as_str().to_string())
-    } else {
-        // 备用模式
-        let simple_pattern = format!(r#"{}\s*:\s*([0-9.]+|[^"'\}},\s]+)"#, key);
-        let simple_re = Regex::new(&simple_pattern).ok()?;
-        simple_re.captures(json_str).and_then(|cap| cap.get(1).map(|m| m.as_str().to_string()))
-    }
-}
-
+// 辅助函数：从JSON字符串中提取值 - 移除未使用的函数
+// 移除未使用的函数
+// fn extract_json_value(_json_str: &str, key: &str) -> Option<String> {
+//     None
+// }
 fn main() -> std::io::Result<()> {
     println!("🎮 小游戏服务器启动中...");
     println!("🌐 访问 http://localhost:8082 开始游戏");
     println!("🏎️ 赛车游戏API已就绪");
+
+    // 初始化数据库
+    let db_manager = Arc::new(SyncDatabaseManager::new());
 
     let server = Server::http("0.0.0.0:8082").unwrap();
     let game_state = Arc::new(Mutex::new(GuessGameState::new()));
@@ -452,6 +447,7 @@ fn main() -> std::io::Result<()> {
     for mut request in server.incoming_requests() {
         let game_state = game_state.clone();
         let racing_storage = racing_storage.clone();
+        let db_manager = db_manager.clone();
 
         let response = match (request.method(), request.url()) {
             (Method::Get, "/api/info") => {
@@ -493,22 +489,30 @@ fn main() -> std::io::Result<()> {
                     .with_header(Header::from_bytes("Content-Type", "application/json").unwrap())
             }
             (Method::Get, "/api/leaderboard") => {
-                let leaderboard = vec![
-                    LeaderboardEntry {
-                        name: "玩家A".to_string(),
-                        score: 100,
-                        attempts: 3,
-                        date: "2024-01-01".to_string(),
-                    },
-                    LeaderboardEntry {
-                        name: "玩家B".to_string(),
-                        score: 90,
-                        attempts: 5,
-                        date: "2024-01-02".to_string(),
-                    },
-                ];
-                Response::from_string(serde_json::to_string(&leaderboard).unwrap())
-                    .with_header(Header::from_bytes("Content-Type", "application/json").unwrap())
+                let limit = request
+                    .url()
+                    .split('?')
+                    .nth(1)
+                    .and_then(|query| {
+                        query
+                            .split('&')
+                            .find(|param| param.starts_with("limit="))
+                            .and_then(|param| param[6..].parse::<i64>().ok())
+                    })
+                    .unwrap_or(10);
+                
+                let db = db_manager.clone();
+                        match db.get_leaderboard(limit) {
+                    Ok(leaderboard) => {
+                        Response::from_string(serde_json::to_string(&leaderboard).unwrap())
+                            .with_header(Header::from_bytes("Content-Type", "application/json").unwrap())
+                    }
+                    Err(e) => {
+                        Response::from_string(&format!("{{\"error\": \"获取排行榜失败: {}\"}}", e))
+                            .with_header(Header::from_bytes("Content-Type", "application/json").unwrap())
+                            .with_status_code(StatusCode::from(500))
+                    }
+                }
             }
             (Method::Post, "/api/racing/create") => {
                 let mut content = String::new();
@@ -606,6 +610,83 @@ fn main() -> std::io::Result<()> {
             (Method::Get, "/") | (Method::Get, "/index.html") => {
                 let file = std::fs::read("./static/index.html").unwrap();
                 Response::from_data(file).with_header(Header::from_bytes("Content-Type", "text/html").unwrap())
+            }
+            (Method::Post, "/api/database/save") => {
+                let mut content = String::new();
+                request.as_reader().read_to_string(&mut content).unwrap();
+                
+                #[derive(Deserialize)]
+                struct SaveRequest {
+                    game_id: String,
+                    player_name: String,
+                    score: i32,
+                    reaction_time: Option<f64>,
+                }
+                
+                match serde_json::from_str::<SaveRequest>(&content) {
+                    Ok(req) => {
+                        let game_id = req.game_id.clone();
+            let player_name = req.player_name.clone();
+            let score = req.score;
+            let reaction_time = req.reaction_time;
+            let db = db_manager.clone();
+            let _ = db.save_game_record(&game_id, &player_name, score, reaction_time);
+            
+            Response::from_string("游戏记录已保存")
+                .with_header(Header::from_str("Content-Type: text/plain; charset=utf-8").unwrap())
+                    }
+                    Err(e) => {
+                        Response::from_string(&format!("{{\"error\": \"请求格式错误: {}\"}}", e))
+                            .with_header(Header::from_bytes("Content-Type", "application/json").unwrap())
+                            .with_status_code(StatusCode::from(400))
+                    }
+                }
+            }
+            (Method::Get, url) if url.starts_with("/api/database/player/") => {
+                let player_name = url.trim_start_matches("/api/database/player/");
+                let limit = request
+                    .url()
+                    .split('?')
+                    .nth(1)
+                    .and_then(|query| {
+                        query
+                            .split('&')
+                            .find(|param| param.starts_with("limit="))
+                            .and_then(|param| param[6..].parse::<i64>().ok())
+                    })
+                    .unwrap_or(10);
+                
+                let db = db_manager.clone();
+                        match db.get_player_history(player_name, limit) {
+                    Ok(records) => {
+                        Response::from_string(serde_json::to_string(&records).unwrap())
+                            .with_header(Header::from_bytes("Content-Type", "application/json").unwrap())
+                    }
+                    Err(e) => {
+                        Response::from_string(&format!("{{\"error\": \"获取玩家历史记录失败: {}\"}}", e))
+                            .with_header(Header::from_bytes("Content-Type", "application/json").unwrap())
+                            .with_status_code(StatusCode::from(500))
+                    }
+                }
+            }
+            (Method::Get, "/api/database/stats") => {
+                let db = db_manager.clone();
+                match db.get_stats() {
+                    Ok((total_records, total_players)) => {
+                        let stats = serde_json::json!({
+                            "total_records": total_records,
+                            "total_players": total_players,
+                            "status": "connected"
+                        });
+                        Response::from_string(serde_json::to_string(&stats).unwrap())
+                            .with_header(Header::from_bytes("Content-Type", "application/json").unwrap())
+                    }
+                    Err(e) => {
+                        Response::from_string(&format!("{{\"error\": \"获取数据库统计失败: {}\"}}", e))
+                            .with_header(Header::from_bytes("Content-Type", "application/json").unwrap())
+                            .with_status_code(StatusCode::from(500))
+                    }
+                }
             }
             (Method::Get, url) => {
                 let current_dir = std::env::current_dir().unwrap();
